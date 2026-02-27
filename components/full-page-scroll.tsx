@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
+import { useIsMobile } from "@/components/ui/use-mobile"
 
 export function FullPageScroll({ children }: { children: React.ReactNode }) {
   const [currentSection, setCurrentSection] = useState(0)
@@ -10,9 +11,18 @@ export function FullPageScroll({ children }: { children: React.ReactNode }) {
   const sectionCount = Array.isArray(children) ? children.length : 1
   const touchStartY = useRef(0)
   const touchEndY = useRef(0)
+  const isMobile = useIsMobile()
+  const [hasMounted, setHasMounted] = useState(false)
+
+  const fullPageEnabled = hasMounted && !isMobile
+
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
 
   // Handle wheel scroll
   useEffect(() => {
+    if (!fullPageEnabled) return
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault()
       if (isScrolling) return
@@ -37,10 +47,11 @@ export function FullPageScroll({ children }: { children: React.ReactNode }) {
         sectionsElement.removeEventListener("wheel", handleWheel)
       }
     }
-  }, [currentSection, isScrolling, sectionCount])
+  }, [currentSection, isScrolling, sectionCount, fullPageEnabled])
 
   // Handle touch events for mobile
   useEffect(() => {
+    if (!fullPageEnabled) return
     const handleTouchStart = (e: TouchEvent) => {
       touchStartY.current = e.touches[0].clientY
     }
@@ -77,10 +88,11 @@ export function FullPageScroll({ children }: { children: React.ReactNode }) {
         sectionsElement.removeEventListener("touchend", handleTouchEnd)
       }
     }
-  }, [currentSection, isScrolling, sectionCount])
+  }, [currentSection, isScrolling, sectionCount, fullPageEnabled])
 
   // Update URL hash and reset isScrolling after transition
   useEffect(() => {
+    if (!fullPageEnabled) return
     const sections = ["home", "about", "projects", "technologies", "contact"]
     const sectionId = sections[currentSection]
     if (sectionId) {
@@ -89,10 +101,11 @@ export function FullPageScroll({ children }: { children: React.ReactNode }) {
 
     const timer = setTimeout(() => setIsScrolling(false), 1000)
     return () => clearTimeout(timer)
-  }, [currentSection])
+  }, [currentSection, fullPageEnabled])
 
   // Keyboard navigation
   useEffect(() => {
+    if (!fullPageEnabled) return
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isScrolling) return
 
@@ -107,7 +120,7 @@ export function FullPageScroll({ children }: { children: React.ReactNode }) {
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [currentSection, isScrolling, sectionCount])
+  }, [currentSection, isScrolling, sectionCount, fullPageEnabled])
 
   const navigateToSection = (index: number) => {
     if (index >= 0 && index < sectionCount && !isScrolling) {
@@ -128,44 +141,52 @@ export function FullPageScroll({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div ref={sectionsRef} className="h-screen overflow-hidden relative">
+    <div ref={sectionsRef} className={fullPageEnabled ? "h-screen overflow-hidden relative" : "relative"}>
       <div
-        className="transition-transform duration-1000 ease-in-out"
-        style={{ transform: `translateY(-${currentSection * 100}vh)` }}
+        className={fullPageEnabled ? "transition-transform duration-1000 ease-in-out" : undefined}
+        style={fullPageEnabled ? { transform: `translateY(-${currentSection * 100}vh)` } : undefined}
       >
         {Array.isArray(children)
           ? children.map((child, index) => (
               <div
                 key={index}
-                className={`h-screen w-full ${getSectionBackground(index)} flex items-center justify-center`}
+                className={
+                  fullPageEnabled
+                    ? `h-screen w-full ${getSectionBackground(index)} flex items-center justify-center`
+                    : `w-full ${getSectionBackground(index)}`
+                }
               >
                 {child}
               </div>
             ))
-          : <div className="h-screen bg-[#0a0a0a]">{children}</div>}
+          : (
+              <div className={fullPageEnabled ? "h-screen bg-[#0a0a0a]" : "bg-[#0a0a0a]"}>{children}</div>
+            )}
       </div>
 
-      <div className="fixed right-8 top-1/2 transform -translate-y-1/2 z-50 hidden md:block">
-        <div className="flex flex-col items-center space-y-4">
-          {Array.from({ length: sectionCount }).map((_, index) => (
-            <button
-              key={index}
-              onClick={() => navigateToSection(index)}
-              className="group relative flex items-center"
-              aria-label={`Navegar para seção ${index + 1}`}
-            >
-              <span
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  currentSection === index ? "w-3 h-3 bg-[#00ffaa]" : "bg-white/30 group-hover:bg-white/50"
-                }`}
-              />
-              <span className="absolute right-full mr-2 py-1 px-2 rounded bg-[#161616] text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                {["Home", "Sobre", "Projetos", "Tecnologias", "Contato"][index]}
-              </span>
-            </button>
-          ))}
+      {fullPageEnabled && (
+        <div className="fixed right-8 top-1/2 transform -translate-y-1/2 z-50 hidden md:block">
+          <div className="flex flex-col items-center space-y-4">
+            {Array.from({ length: sectionCount }).map((_, index) => (
+              <button
+                key={index}
+                onClick={() => navigateToSection(index)}
+                className="group relative flex items-center"
+                aria-label={`Navegar para seção ${index + 1}`}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    currentSection === index ? "w-3 h-3 bg-[#00ffaa]" : "bg-white/30 group-hover:bg-white/50"
+                  }`}
+                />
+                <span className="absolute right-full mr-2 py-1 px-2 rounded bg-[#161616] text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  {["Home", "Sobre", "Projetos", "Tecnologias", "Contato"][index]}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

@@ -4,10 +4,10 @@
 
 html,
 body {
-  overflow: hidden;
   height: 100%;
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
 }
 
 body {
@@ -15,11 +15,7 @@ body {
 }
 
 section {
-  scroll-margin-top: 0;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  scroll-margin-top: 96px;
 }
 
 @layer utilities {

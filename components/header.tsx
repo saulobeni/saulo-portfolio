@@ -38,8 +38,19 @@ export function Header() {
       }
     }
 
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace("#", "")
+      if (hash) setActiveSection(hash)
+    }
+
     window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
+    window.addEventListener("hashchange", handleHashChange)
+    handleHashChange()
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll)
+      window.removeEventListener("hashchange", handleHashChange)
+    }
   }, [])
 
   return (
